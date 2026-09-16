@@ -4,11 +4,11 @@ import android.speech.tts.TextToSpeech
 import java.util.*
 object TtsHelper {
     var tts: TextToSpeech? = null
-    fun speakStatic(c: Context, amt: Double) {
+    fun speakStatic(c: Context, amt: Double, credit: Boolean = true) {
         try { if (!SettingsActivity.voiceOn) return } catch(e: Exception) {}
         if (tts == null) tts = TextToSpeech(c) { s ->
-            if (s == TextToSpeech.SUCCESS) { applySettings(); speakNow(c, amt) }
-        } else speakNow(c, amt)
+            if (s == TextToSpeech.SUCCESS) { applySettings(); speakNow(c, amt, credit) }
+        } else speakNow(c, amt, credit)
     }
     fun speakText(c: Context, text: String) {
         try { if (!SettingsActivity.voiceOn) return } catch(e: Exception) {}
@@ -22,12 +22,12 @@ object TtsHelper {
         try { tts?.setSpeechRate(SettingsActivity.speed) } catch(e: Exception) {}
         try { tts?.setPitch(SettingsActivity.pitch) } catch(e: Exception) {}
     }
-    private fun speakNow(c: Context, amt: Double) {
+    private fun speakNow(c: Context, amt: Double, credit: Boolean) {
         applySettings()
         val p = c.getSharedPreferences("samrat", Context.MODE_PRIVATE)
         val shop = p.getString("shop_name", "సమ్రాట్ స్టోర్స్")
         val rupees = amt.toInt()
-        val tpl = try { SettingsActivity.creditTpl } catch(e: Exception) { "{amount} రూపాయలు వచ్చాయి" }
+        val tpl = try { if (credit) SettingsActivity.creditTpl else SettingsActivity.debitTpl } catch(e: Exception) { "{amount} రూపాయలు వచ్చాయి" }
         val text = tpl.replace("{amount}", rupees.toString())
         tts?.speak("$text. $shop కి ధన్యవాదాలు", TextToSpeech.QUEUE_FLUSH, null, null)
     }

@@ -161,7 +161,7 @@ public class MainActivity extends Activity {
             } catch (Exception e) {}
             try {
                 if (fraud) TtsHelper.INSTANCE.speakText(this, "హెచ్చరిక! " + (int) amt + " రూపాయలు మీ ఖాతా నుండి పోయాయి. ఇది మీరు చేశారా?");
-                else TtsHelper.INSTANCE.speakStatic(this, amt);
+                else TtsHelper.INSTANCE.speakStatic(this, amt, cr);
             } catch (Exception e) {}
             try { if (SettingsActivity.notifyOn) notifyUser(amt, cr, fraud); } catch (Exception e) {}
         });

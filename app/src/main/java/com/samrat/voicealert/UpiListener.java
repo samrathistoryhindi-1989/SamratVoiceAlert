@@ -12,7 +12,6 @@ double amt=MainActivity.extractAmount(txt);
 if(amt>0 && MainActivity.instance!=null){
 boolean cr = txt.contains("received")||txt.contains("credit")||txt.contains("credited")||txt.contains("vachayi")||txt.contains("received money");
 String vpa="UPI";
- try{ Intent it=new Intent(this, AlertActivity.class); it.putExtra("amt", String.valueOf(amt)); it.putExtra("credit", cr); it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(it);}catch(Exception e2){}
 MainActivity.instance.runOnUiThread(()->MainActivity.instance.showAlert(amt,cr,vpa));
 }
 }catch(Exception ex){}
