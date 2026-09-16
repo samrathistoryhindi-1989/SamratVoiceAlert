@@ -19,6 +19,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
     public static MainActivity instance;
@@ -27,6 +29,21 @@ public class MainActivity extends Activity {
     LinearLayout txnBox;
     TextView balanceTv, inTv, outTv, shopTv;
     int notifId = 1;
+
+    public static double extractAmount(String msg) {
+        try {
+            Matcher m = Pattern.compile("(?:Rs\\.?|INR|₹)\\s?([0-9,]+(?:\\.[0-9]{1,2})?)", Pattern.CASE_INSENSITIVE).matcher(msg);
+            if (m.find()) return Double.parseDouble(m.group(1).replace(",", ""));
+        } catch (Exception e) {}
+        return 0;
+    }
+
+    public static boolean isCredit(String msg) {
+        String l = msg.toLowerCase(Locale.US);
+        if (l.contains("credited") || l.contains("received") || l.contains("deposited")) return true;
+        if (l.contains("debited") || l.contains("sent") || l.contains("paid") || l.contains("withdrawn")) return false;
+        return true;
+    }
 
     @Override protected void onCreate(Bundle s) {
         super.onCreate(s);
@@ -173,9 +190,9 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 26)
             nm.createNotificationChannel(new NotificationChannel(ch, "Alerts", NotificationManager.IMPORTANCE_HIGH));
         Notification.Builder b = new Notification.Builder(this)
-               .setContentTitle(fraud? "⚠️ Fraud Alert!" : (cr? "💰 Money Received" : "💸 Money Sent"))
-               .setContentText("Rs." + (int) amt)
-               .setSmallIcon(android.R.drawable.ic_dialog_info);
+              .setContentTitle(fraud? "⚠️ Fraud Alert!" : (cr? "💰 Money Received" : "💸 Money Sent"))
+              .setContentText("Rs." + (int) amt)
+              .setSmallIcon(android.R.drawable.ic_dialog_info);
         if (Build.VERSION.SDK_INT >= 26) b.setChannelId(ch);
         nm.notify(notifId++, b.build());
     }
