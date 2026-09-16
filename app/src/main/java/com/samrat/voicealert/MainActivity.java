@@ -1,44 +1,212 @@
 package com.samrat.voicealert;
-import android.app.*; import android.os.*; import android.widget.*; import android.graphics.Color; import android.speech.tts.TextToSpeech; import android.content.pm.*; import java.util.*; import java.util.regex.*;
+import android.Manifest;
+import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.widget.*;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
+
 public class MainActivity extends Activity {
-TextToSpeech tts; LinearLayout txnList; TextView balTv,inTv,outTv; double balance=50000,totalIn=0,totalOut=0; public static MainActivity instance; NotificationManager nm;
-@Override protected void onCreate(Bundle s){ super.onCreate(s); instance=this; nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
-if(Build.VERSION.SDK_INT>=26){ nm.createNotificationChannel(new NotificationChannel("alert","Alerts",3)); }
-LinearLayout root=new LinearLayout(this); root.setOrientation(1); root.setPadding(30,30,30,30);
-TextView title=new TextView(this); title.setText("Samrat Alert"); title.setTextSize(28);
-balTv=new TextView(this); balTv.setTextSize(22); inTv=new TextView(this); outTv=new TextView(this);
-LinearLayout row=new LinearLayout(this); row.addView(inTv); TextView sp=new TextView(this); sp.setText("   "); row.addView(sp); row.addView(outTv);
-txnList=new LinearLayout(this); txnList.setOrientation(1);
-Button tc=new Button(this); tc.setText("Test Credit ₹500"); tc.setOnClickListener(v->showAlert(500,true,"ravi@upi"));
-Button td=new Button(this); td.setText("Test Debit ₹1000"); td.setOnClickListener(v->showAlert(1000,false,"swiggy@upi"));
-Button tf=new Button(this); tf.setText("Test Fraud ₹60000 debit"); tf.setOnClickListener(v->showAlert(60000,false,"unknown@upi"));
-updateAll();
-root.addView(title); root.addView(balTv); root.addView(row);
-TextView h=new TextView(this); h.setText("\nTransactions:"); h.setTextSize(20); root.addView(h);
-ScrollView sc=new ScrollView(this); sc.addView(txnList); sc.setLayoutParams(new LinearLayout.LayoutParams(-1,500)); root.addView(sc);
-root.addView(tc); root.addView(td); root.addView(tf); setContentView(root);
-tts=new TextToSpeech(this,st->{ if(st==0) tts.setLanguage(new Locale("te","IN")); });
-requestPermissions(new String[]{"android.permission.RECEIVE_SMS","android.permission.READ_SMS","android.permission.POST_NOTIFICATIONS"},1);
-}
-void updateAll(){ balTv.setText("Balance: Rs."+String.format("%,.0f",balance)); inTv.setText("In: Rs."+totalIn); inTv.setTextColor(Color.parseColor("#008000")); outTv.setText("Out: Rs."+totalOut); outTv.setTextColor(Color.RED); }
-void notify(String t,String b,boolean cr){ Notification.Builder nb; if(Build.VERSION.SDK_INT>=26) nb=new Notification.Builder(this,"alert"); else nb=new Notification.Builder(this); nb.setContentTitle(t).setContentText(b).setSmallIcon(android.R.drawable.ic_dialog_info); nm.notify((int)System.currentTimeMillis(),nb.build()); }
-public void showAlert(double amt,boolean isCredit,String vpa){
-if(isCredit){balance+=amt; totalIn+=amt;} else {balance-=amt; totalOut+=amt;} updateAll();
-String voice = isCredit ? amt+" రూపాయలు క్రెడిట్ అయ్యాయి" : amt+" రూపాయలు డెబిట్ అయ్యాయి";
-if(balance<1000) voice+=". తక్కువ బ్యాలెన్స్ హెచ్చరిక";
-if(!isCredit && amt>=50000) voice+=". ఫ్రాడ్ హెచ్చరిక! పెద్ద మొత్తం డెబిట్ అయింది";
-if(tts!=null) tts.speak(voice,0,null,null);
-notify(isCredit?"💰 డబ్బులు వచ్చాయి":"💸 డబ్బులు పోయాయి","Rs."+amt+" "+vpa,isCredit);
-AlertDialog d=new AlertDialog.Builder(this).create(); LinearLayout l=new LinearLayout(this); l.setOrientation(1); l.setPadding(50,50,50,50); l.setBackgroundColor(isCredit?Color.parseColor("#E8F5E9"):Color.parseColor("#FFEBEE"));
-TextView t1=new TextView(this); t1.setText(isCredit?"💰 డబ్బులు వచ్చాయి!":"💸 డబ్బులు పోయాయి!"); t1.setTextSize(24);
-TextView t2=new TextView(this); t2.setText("Rs."+amt); t2.setTextSize(36); t2.setTextColor(isCredit?Color.parseColor("#008000"):Color.RED);
-TextView t3=new TextView(this); t3.setText((isCredit?"From: ":"To: ")+vpa);
-if(balance<1000){ TextView w=new TextView(this); w.setText("⚠️ Low Balance!"); w.setTextColor(Color.RED); l.addView(w); }
-if(!isCredit && amt>=50000){ TextView f=new TextView(this); f.setText("🛡️ Fraud Alert!"); f.setTextColor(Color.RED); f.setTextSize(20); l.addView(f); }
-l.addView(t1); l.addView(t2); l.addView(t3); d.setView(l); d.show();
-TextView tx=new TextView(this); tx.setText((isCredit?"+ Rs.":"- Rs.")+amt+" "+vpa); tx.setTextColor(isCredit?Color.parseColor("#008000"):Color.RED); txnList.addView(tx,0);
-}
-public static double extractAmount(String b){ var m=Pattern.compile("(?:Rs\\.?|INR|₹)\\s?([0-9,]+)",Pattern.CASE_INSENSITIVE).matcher(b); if(m.find()) return Double.parseDouble(m.group(1).replace(",","")); return 0; }
-public static boolean isCredit(String b){ b=b.toLowerCase(); return b.contains("credit")||b.contains("received"); }
-@Override protected void onDestroy(){ if(tts!=null) tts.shutdown(); super.onDestroy(); }
+    public static MainActivity instance;
+    double balance = 50000, totalIn = 0, totalOut = 0;
+    ArrayList<String[]> txns = new ArrayList<>();
+    LinearLayout txnBox;
+    TextView balanceTv, inTv, outTv, shopTv;
+    int notifId = 1;
+
+    @Override protected void onCreate(Bundle s) {
+        super.onCreate(s);
+        instance = this;
+        askPerms();
+        buildUI();
+        refreshUI();
+    }
+
+    void askPerms() {
+        ArrayList<String> ps = new ArrayList<>();
+        if (checkSelfPermission(Manifest.permission.RECEIVE_SMS)!= PackageManager.PERMISSION_GRANTED)
+            ps.add(Manifest.permission.RECEIVE_SMS);
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!= PackageManager.PERMISSION_GRANTED)
+            ps.add(Manifest.permission.POST_NOTIFICATIONS);
+        if (!ps.isEmpty()) requestPermissions(ps.toArray(new String[0]), 1);
+    }
+
+    GradientDrawable round(int color, int r) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color); d.setCornerRadius(r); return d;
+    }
+
+    LinearLayout.LayoutParams lp(int top) {
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2);
+        p.setMargins(0, top, 0, 0); return p;
+    }
+
+    void buildUI() {
+        SharedPreferences p = getSharedPreferences("samrat", MODE_PRIVATE);
+        String shop = p.getString("shop_name", "సమ్రాట్ స్టోర్స్");
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(28, 28, 28, 28);
+        root.setBackgroundColor(Color.parseColor("#121212"));
+        ScrollView sc = new ScrollView(this); sc.addView(root);
+
+        TextView head = new TextView(this);
+        head.setText("🔊 Samrat Voice Alert");
+        head.setTextSize(24); head.setTextColor(Color.WHITE);
+        head.setTypeface(null, Typeface.BOLD); head.setGravity(Gravity.CENTER);
+        root.addView(head, lp(8));
+
+        LinearLayout shopCard = new LinearLayout(this);
+        shopCard.setOrientation(LinearLayout.VERTICAL);
+        shopCard.setBackground(round(Color.parseColor("#1E1E1E"), 24));
+        shopCard.setPadding(28, 24, 28, 24);
+        shopTv = new TextView(this);
+        shopTv.setText("🏪 " + shop); shopTv.setTextSize(18);
+        shopTv.setTextColor(Color.WHITE); shopTv.setTypeface(null, Typeface.BOLD);
+        shopTv.setGravity(Gravity.CENTER);
+        TextView st = new TextView(this);
+        st.setText("● Listening for UPI SMS..."); st.setTextSize(14);
+        st.setTextColor(Color.parseColor("#4CAF50")); st.setGravity(Gravity.CENTER);
+        shopCard.addView(shopTv); shopCard.addView(st);
+        root.addView(shopCard, lp(24));
+
+        LinearLayout balCard = new LinearLayout(this);
+        balCard.setOrientation(LinearLayout.VERTICAL);
+        balCard.setBackground(round(Color.parseColor("#1E1E1E"), 24));
+        balCard.setPadding(28, 24, 28, 24);
+        TextView bl = new TextView(this);
+        bl.setText("Balance"); bl.setTextSize(14); bl.setTextColor(Color.parseColor("#AAAAAA"));
+        balanceTv = new TextView(this);
+        balanceTv.setTextSize(34); balanceTv.setTextColor(Color.WHITE);
+        balanceTv.setTypeface(null, Typeface.BOLD);
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        inTv = new TextView(this); inTv.setTextSize(16);
+        inTv.setTextColor(Color.parseColor("#4CAF50")); inTv.setTypeface(null, Typeface.BOLD);
+        outTv = new TextView(this); outTv.setTextSize(16);
+        outTv.setTextColor(Color.parseColor("#F44336")); outTv.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams w = new LinearLayout.LayoutParams(0, -2, 1);
+        row.addView(inTv, w); outTv.setGravity(Gravity.END); row.addView(outTv, w);
+        balCard.addView(bl); balCard.addView(balanceTv); balCard.addView(row, lp(8));
+        root.addView(balCard, lp(20));
+
+        TextView tl = new TextView(this);
+        tl.setText("Transactions:"); tl.setTextSize(16); tl.setTextColor(Color.parseColor("#AAAAAA"));
+        root.addView(tl, lp(24));
+        txnBox = new LinearLayout(this);
+        txnBox.setOrientation(LinearLayout.VERTICAL);
+        root.addView(txnBox, lp(12));
+
+        TextView testL = new TextView(this);
+        testL.setText("Test:"); testL.setTextSize(14); testL.setTextColor(Color.parseColor("#AAAAAA"));
+        root.addView(testL, lp(24));
+        root.addView(mkBtn("TEST CREDIT ₹500", "#1B8C3A", () -> showAlert(500, true, "PhonePe Test")), lp(12));
+        root.addView(mkBtn("TEST DEBIT ₹1000", "#C62828", () -> showAlert(1000, false, "GPay Test")), lp(12));
+        root.addView(mkBtn("TEST FRAUD ₹60000 DEBIT", "#E65100", () -> showAlert(60000, false, "Unknown VPA")), lp(12));
+
+        LinearLayout menu = new LinearLayout(this);
+        menu.setOrientation(LinearLayout.HORIZONTAL);
+        Button rep = mkBtn("📊 Reports", "#1565C0", () -> startActivity(new Intent(this, ReportsActivity.class)));
+        Button set = mkBtn("⚙ Settings", "#424242", () -> startActivity(new Intent(this, SettingsActivity.class)));
+        LinearLayout.LayoutParams w2 = new LinearLayout.LayoutParams(0, -2, 1);
+        w2.setMargins(0, 0, 12, 0);
+        menu.addView(rep, w2);
+        LinearLayout.LayoutParams w3 = new LinearLayout.LayoutParams(0, -2, 1);
+        w3.setMargins(12, 0, 0, 0);
+        menu.addView(set, w3);
+        root.addView(menu, lp(20));
+
+        setContentView(sc);
+    }
+
+    Button mkBtn(String t, String color, Runnable r) {
+        Button b = new Button(this);
+        b.setText(t); b.setTextColor(Color.WHITE);
+        b.setTextSize(16); b.setTypeface(null, Typeface.BOLD);
+        b.setBackground(round(Color.parseColor(color), 24));
+        b.setPadding(20, 28, 20, 28);
+        b.setOnClickListener(v -> r.run());
+        return b;
+    }
+
+    public void showAlert(double amt, boolean cr, String vpa) {
+        runOnUiThread(() -> {
+            boolean fraud =!cr && amt >= 50000;
+            if (cr) { balance += amt; totalIn += amt; }
+            else { balance -= amt; totalOut += amt; }
+            String time = new SimpleDateFormat("hh:mm a", Locale.getDefault()).format(new Date());
+            String label = (vpa == null || vpa.isEmpty()? "UPI" : vpa) + " • " + time;
+            txns.add(0, new String[]{label, String.valueOf((int) amt), cr? "c" : "d", fraud? "1" : "0"});
+            refreshUI();
+            try {
+                Intent it = new Intent(this, AlertActivity.class);
+                it.putExtra("amt", String.valueOf((int) amt));
+                it.putExtra("credit", cr);
+                startActivity(it);
+            } catch (Exception e) {}
+            try {
+                if (fraud) TtsHelper.INSTANCE.speakText(this, "హెచ్చరిక! " + (int) amt + " రూపాయలు మీ ఖాతా నుండి పోయాయి. ఇది మీరు చేశారా?");
+                else TtsHelper.INSTANCE.speakStatic(this, amt);
+            } catch (Exception e) {}
+            try { if (SettingsActivity.notifyOn) notifyUser(amt, cr, fraud); } catch (Exception e) {}
+        });
+    }
+
+    void notifyUser(double amt, boolean cr, boolean fraud) {
+        NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        String ch = "alerts";
+        if (Build.VERSION.SDK_INT >= 26)
+            nm.createNotificationChannel(new NotificationChannel(ch, "Alerts", NotificationManager.IMPORTANCE_HIGH));
+        Notification.Builder b = new Notification.Builder(this)
+               .setContentTitle(fraud? "⚠️ Fraud Alert!" : (cr? "💰 Money Received" : "💸 Money Sent"))
+               .setContentText("Rs." + (int) amt)
+               .setSmallIcon(android.R.drawable.ic_dialog_info);
+        if (Build.VERSION.SDK_INT >= 26) b.setChannelId(ch);
+        nm.notify(notifId++, b.build());
+    }
+
+    void refreshUI() {
+        balanceTv.setText("Rs." + String.format(Locale.US, "%,.0f", balance));
+        inTv.setText("In: Rs." + String.format(Locale.US, "%,.0f", totalIn));
+        outTv.setText("Out: Rs." + String.format(Locale.US, "%,.0f", totalOut));
+        txnBox.removeAllViews();
+        if (txns.isEmpty()) {
+            TextView e = new TextView(this);
+            e.setText("No transactions yet"); e.setTextColor(Color.parseColor("#777777"));
+            e.setTextSize(14); txnBox.addView(e);
+            return;
+        }
+        for (int i = 0; i < Math.min(txns.size(), 30); i++) {
+            String[] t = txns.get(i);
+            LinearLayout r = new LinearLayout(this);
+            r.setOrientation(LinearLayout.HORIZONTAL);
+            r.setBackground(round(Color.parseColor("#1E1E1E"), 20));
+            r.setPadding(24, 20, 24, 20);
+            TextView l = new TextView(this);
+            l.setText(t[0]); l.setTextSize(14); l.setTextColor(Color.WHITE);
+            TextView a = new TextView(this);
+            boolean isC = t[2].equals("c");
+            a.setText((isC? "+ ₹" : "- ₹") + t[1]);
+            a.setTextSize(15); a.setTypeface(null, Typeface.BOLD);
+            a.setTextColor(Color.parseColor(t[3].equals("1")? "#FF9800" : (isC? "#4CAF50" : "#F44336")));
+            LinearLayout.LayoutParams w = new LinearLayout.LayoutParams(0, -2, 1);
+            r.addView(l, w); a.setGravity(Gravity.END); r.addView(a, w);
+            txnBox.addView(r, lp(10));
+        }
+    }
 }

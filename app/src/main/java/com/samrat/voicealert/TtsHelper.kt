@@ -10,6 +10,12 @@ object TtsHelper {
             if (s == TextToSpeech.SUCCESS) { applySettings(); speakNow(c, amt) }
         } else speakNow(c, amt)
     }
+    fun speakText(c: Context, text: String) {
+        try { if (!SettingsActivity.voiceOn) return } catch(e: Exception) {}
+        if (tts == null) tts = TextToSpeech(c) { s ->
+            if (s == TextToSpeech.SUCCESS) { applySettings(); tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null) }
+        } else { applySettings(); tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null) }
+    }
     private fun applySettings() {
         val lang = try { SettingsActivity.lang } catch(e: Exception) { "te" }
         tts?.language = Locale(lang, "IN")
