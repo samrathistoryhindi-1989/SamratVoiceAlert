@@ -2,7 +2,7 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS"/>
     <uses-permission android:name="android.permission.READ_SMS"/>
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
-    <application android:label="Samrat Voice Alert">
+    <application android:label="Samrat Voice Alert" android:icon="@android:drawable/ic_btn_speak_now">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
